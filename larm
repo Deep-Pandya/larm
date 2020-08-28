@@ -1,0 +1,94 @@
+#!/bin/bash
+
+source_path="deb [trusted=yes] file:$HOME/apt-local-repository/ ./"
+
+
+echo -e "\n\tWelcome to LARM: Local Apt Repository Manager!\n\nWhat you want to do?"
+
+echo -ne "\nSet up local repository on your machine (1)\nUpdate the local apt (2)\nRemove the local repository setup from your machine(3)\n\nEnter the choice (1/2/3):"
+
+read choice;
+
+case $choice in
+
+    1)
+        echo -e "\nSetting up the local apt repository on your machine..."
+        echo -e "\nTaking HOME directory = "$HOME""
+        sleep 1
+        mkdir -p "$HOME/apt-local-repository"
+        echo "$HOME/apt-local-repository is ready to store deb(s)"
+        echo -e "\nIt is recommended to set you local repository to the top of repository list at /etc/apt/sources.list"
+        sleep 2
+
+        if [[ "$(head -n 1 /etc/apt/sources.list)" != "$(echo "$source_path")" ]];
+
+            then {
+                    echo -e "Setting up it requires a root privilege...."
+                    sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup
+                    sudo sed -i "1i $source_path" /etc/apt/sources.list
+                    sleep 1
+                    echo -e "Done!\nlocal repository has been set up successfully!\n\nNow you can put deb(s) to $HOME/apt-local-repository :)"
+                };
+    
+            else echo -e "/etc/apt/sources.list is already set up!\n\nNow you can put deb(s) to $HOME/apt-local-repository :)";
+        fi
+
+        echo -e "\nTo update the local apt, choose second option"
+
+     ;;
+
+
+     2)
+
+       if [[ "$(head -n 1 /etc/apt/sources.list)" != "$(echo "$source_path")" ]]; then echo -e "\nlocal repository is not setup, select 1st choice to setup from scretch";
+        
+        else {
+            echo -e "\nUpdating the local apt repository on your machine...\n"
+            echo -e "Searching for debs at "$HOME/apt-local-repository"\n"
+            sleep 1
+            cd $HOME/apt-local-repository/; apt-ftparchive packages . > Packages
+            cd
+        
+            number_of_packages=$(grep ^Package: "$HOME/apt-local-repository/Packages" | wc -l)
+        
+            if [[ $number_of_packages -eq 0 ]]; then echo -e "No deb package(s) found at $HOME/apt-local-repository\nPut some deb(s) at $HOME/apt-local-repository and try again";
+    
+            else {
+                echo "Found $(grep ^Package: "$HOME/apt-local-repository/Packages" | wc -l) deb package(s)."
+                sleep 2
+                echo -e "\nRunning sudo apt update requires root privilege"
+                sudo apt update
+
+                echo -e "\nDone!\nNow you can installing package using sudo apt install!"
+            }; fi
+            
+        }; fi
+        
+     ;;
+
+    
+    3)
+
+        echo -e "\nRemoving the local apt repository from at /etc/apt/sources.list"
+        sleep 1
+
+        if [[ "$(head -n 1 /etc/apt/sources.list)" == "$(echo "$source_path")" ]];
+
+            then {
+                    echo -e "Removing local repository from /etc/apt/sources.list requires a root privilege...."
+                    sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup
+                    sudo sed -i "1d" /etc/apt/sources.list
+                    sudo apt update
+                    sleep 1
+                    echo -e "\n\nDone!\nlocal repository has been removed from /etc/apt/sources.list!\n\nNow you may remove $HOME/apt-local-repository directory manually:)"
+                };
+    
+            else echo -e "\n/etc/apt/sources.list is not setup with LARM, nothing to remove by localrepo_setup!\nyou may remove $HOME/apt-local-repository directory manually :)";
+        fi
+    
+     ;;
+    
+    
+    *) echo -e "\n Incorrect choice; exiting..." ;;
+
+esac
